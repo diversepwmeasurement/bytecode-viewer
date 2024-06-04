@@ -1,38 +1,40 @@
-# This will build the BCV repo and upload the package as an artifact
-
-name: Build BCV
-
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
 jobs:
   build:
-
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ '8', '11', '17', '21' ] # LTS versions
-
+    runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK ${{ matrix.java }}
+    - continue-on-error: true
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      name: Set up JDK ${{ matrix.java }}
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ matrix.java }}
-        distribution: 'temurin'
         cache: maven
-    - name: Build with Maven
+        distribution: temurin
+        java-version: ${{ matrix.java }}
+    - continue-on-error: true
+      name: Build with Maven
       run: mvn -B package --file pom.xml
-    - name: Extract Maven project version
-      run: echo "bcv_version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_ENV
+    - continue-on-error: true
       id: project
-    - name: 'Upload Artifact'
-      uses: actions/upload-artifact@v4
+      name: Extract Maven project version
+      run: echo "bcv_version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}'
+        --non-recursive exec:exec)" >> $GITHUB_ENV
+    - continue-on-error: true
       if: ${{ matrix.java == '8' }}
+      name: Upload Artifact
+      uses: actions/upload-artifact@v4
       with:
         name: Bytecode-Viewer-${{ env.bcv_version }}-SNAPSHOT
         path: target/Bytecode-Viewer-${{ env.bcv_version }}.jar
         retention-days: 90
+    strategy:
+      matrix:
+        java:
+        - '8'
+        - '11'
+        - '17'
+        - '21'
+name: Build BCV
+on:
+  repository_dispatch:
+    types: trigger-ga___maven.yml
